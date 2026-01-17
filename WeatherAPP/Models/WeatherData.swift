@@ -17,11 +17,12 @@ struct WeatherData: Codable, Identifiable {
     let dailyForecast: [DailyWeather]
     let minutelyPrecipitation: [MinutelyPrecipitation]?
     let weatherAlerts: [WeatherAlert]
+    let airQuality: AirQuality?
     let lastUpdated: Date
 
     enum CodingKeys: String, CodingKey {
         case location, currentWeather, hourlyForecast, dailyForecast
-        case minutelyPrecipitation, weatherAlerts, lastUpdated
+        case minutelyPrecipitation, weatherAlerts, airQuality, lastUpdated
     }
 }
 
@@ -124,6 +125,39 @@ enum AlertSeverity: String, Codable {
     case moderate
     case severe
     case extreme
+}
+
+/// Air Quality data
+struct AirQuality: Codable {
+    let aqi: Int
+    let category: String
+    let pollutants: [String: Double]
+    let dominantPollutant: String?
+
+    var aqiCategory: AQICategory {
+        return AQICategory.from(aqi: aqi)
+    }
+}
+
+/// AQI Category for display
+enum AQICategory: String, Codable {
+    case good = "优"
+    case moderate = "良"
+    case unhealthyForSensitive = "轻度污染"
+    case unhealthy = "中度污染"
+    case veryUnhealthy = "重度污染"
+    case hazardous = "严重污染"
+
+    static func from(aqi: Int) -> AQICategory {
+        switch aqi {
+        case 0...50: return .good
+        case 51...100: return .moderate
+        case 101...150: return .unhealthyForSensitive
+        case 151...200: return .unhealthy
+        case 201...300: return .veryUnhealthy
+        default: return .hazardous
+        }
+    }
 }
 
 /// Weather condition types

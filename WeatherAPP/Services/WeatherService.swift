@@ -76,6 +76,7 @@ class WeatherService: ObservableObject {
                 dailyForecast: dailyForecast,
                 minutelyPrecipitation: minutelyPrecipitation,
                 weatherAlerts: weatherAlerts,
+                airQuality: nil, // TODO: Integrate real air quality data from WeatherKit
                 lastUpdated: Date()
             )
 
@@ -292,6 +293,21 @@ class WeatherService: ObservableObject {
             )
         }
 
+        // Create mock air quality data
+        let mockAirQuality = AirQuality(
+            aqi: Int.random(in: 30...150),
+            category: "mock",
+            pollutants: [
+                "pm25": Double.random(in: 10...75),
+                "pm10": Double.random(in: 20...150),
+                "o3": Double.random(in: 15...100),
+                "no2": Double.random(in: 10...80),
+                "so2": Double.random(in: 5...50),
+                "co": Double.random(in: 200...1000)
+            ],
+            dominantPollutant: "pm25"
+        )
+
         return WeatherData(
             location: location,
             currentWeather: currentWeather,
@@ -299,6 +315,7 @@ class WeatherService: ObservableObject {
             dailyForecast: dailyForecast,
             minutelyPrecipitation: nil,
             weatherAlerts: [],
+            airQuality: mockAirQuality,
             lastUpdated: now
         )
     }

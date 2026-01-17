@@ -84,6 +84,11 @@ struct MainWeatherView: View {
                 MinutelyPrecipitationCard(data: minutely)
             }
 
+            // Air Quality (new feature!)
+            if let airQuality = weather.airQuality {
+                AirQualityCard(airQuality: airQuality)
+            }
+
             // Hourly forecast
             HourlyForecastCard(hourly: weather.hourlyForecast)
 
