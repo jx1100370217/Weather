@@ -89,6 +89,9 @@ struct MainWeatherView: View {
                 AirQualityCard(airQuality: airQuality)
             }
 
+            // Weather Radar (new feature!)
+            WeatherRadarCard(location: weather.location)
+
             // Hourly forecast
             HourlyForecastCard(hourly: weather.hourlyForecast)
 
