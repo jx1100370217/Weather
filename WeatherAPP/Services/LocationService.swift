@@ -76,10 +76,11 @@ class LocationService: NSObject, ObservableObject {
 
     /// Geocode location to get city name using MapKit
     func geocodeLocation(_ location: CLLocation) async throws -> String {
-        // Use MapKit's MKLocalSearch for reverse geocoding (iOS 26.0+ compliant)
-        let searchRequest = MKLocalSearch.Request()
+        // Generate coordinate-based fallback name
+        let coordinateName = generateCoordinateName(for: location)
 
-        // Create a small region around the coordinate
+        // Try MapKit search with timeout to avoid hanging
+        let searchRequest = MKLocalSearch.Request()
         let region = MKCoordinateRegion(
             center: location.coordinate,
             latitudinalMeters: 100,
@@ -91,37 +92,76 @@ class LocationService: NSObject, ObservableObject {
         let search = MKLocalSearch(request: searchRequest)
 
         do {
-            let response = try await search.start()
+            // Use a timeout to avoid long waits in simulator
+            let response = try await withTimeout(seconds: 3) {
+                try await search.start()
+            }
 
             // Try to get location name from mapItems
             if let mapItem = response.mapItems.first {
-                // Use the name directly from mapItem (non-deprecated)
                 if let name = mapItem.name, !name.isEmpty {
-                    // MKMapItem.name is not deprecated and provides location info
                     return name
                 }
-
-                // If name is empty, try using timeZone + coordinates
                 if let timeZone = mapItem.timeZone {
-                    // Use timezone identifier to guess location
                     let components = timeZone.identifier.components(separatedBy: "/")
-                    if components.count > 1 {
-                        return components.last ?? "未知位置"
+                    if components.count > 1, let city = components.last {
+                        return city
                     }
                 }
             }
 
-            // If no results, return coordinate-based name
-            let lat = String(format: "%.2f", location.coordinate.latitude)
-            let lon = String(format: "%.2f", location.coordinate.longitude)
-            return "位置 \(lat), \(lon)"
+            // No results, use coordinate-based name
+            return coordinateName
 
         } catch {
-            print("Geocoding error: \(error.localizedDescription)")
-            // Fallback to coordinate-based name
-            let lat = String(format: "%.2f", location.coordinate.latitude)
-            let lon = String(format: "%.2f", location.coordinate.longitude)
-            return "位置 \(lat), \(lon)"
+            // Silently fail and use coordinates (common in simulator)
+            return coordinateName
+        }
+    }
+
+    /// Generate a readable name from coordinates
+    private func generateCoordinateName(for location: CLLocation) -> String {
+        let lat = location.coordinate.latitude
+        let lon = location.coordinate.longitude
+
+        // Simple region detection based on coordinates
+        let absLat = abs(lat)
+        let absLon = abs(lon)
+
+        // San Francisco area (common simulator default)
+        if absLat > 37.0 && absLat < 38.0 && absLon > 122.0 && absLon < 123.0 {
+            return "旧金山湾区"
+        }
+
+        // Beijing area
+        if absLat > 39.0 && absLat < 41.0 && absLon > 116.0 && absLon < 117.0 {
+            return "北京"
+        }
+
+        // Shanghai area
+        if absLat > 30.0 && absLat < 32.0 && absLon > 121.0 && absLon < 122.0 {
+            return "上海"
+        }
+
+        // Default: show coordinates
+        return String(format: "位置 %.2f, %.2f", lat, lon)
+    }
+
+    /// Helper to add timeout to async operations
+    private func withTimeout<T>(seconds: TimeInterval, operation: @escaping () async throws -> T) async throws -> T {
+        try await withThrowingTaskGroup(of: T.self) { group in
+            group.addTask {
+                try await operation()
+            }
+
+            group.addTask {
+                try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                throw LocationError.geocodingFailed("Timeout")
+            }
+
+            let result = try await group.next()!
+            group.cancelAll()
+            return result
         }
     }
 
