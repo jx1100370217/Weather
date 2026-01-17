@@ -55,19 +55,26 @@ struct MainWeatherView: View {
     @ViewBuilder
     private func weatherContent(weather: WeatherData) -> some View {
         VStack(spacing: 20) {
-            // Location and current temperature
+            // Location and current temperature with enhanced animations
             VStack(spacing: 8) {
                 Text(weather.location.name)
                     .font(.system(size: 32, weight: .medium))
                     .foregroundColor(.white)
+                    .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+                    .transition(.opacity.combined(with: .scale))
 
                 Text("\(Int(weather.currentWeather.temperature))°")
                     .font(.system(size: 96, weight: .thin))
                     .foregroundColor(.white)
+                    .shadow(color: .black.opacity(0.4), radius: 8, x: 0, y: 4)
+                    .contentTransition(.numericText())
+                    .transition(.opacity.combined(with: .scale))
 
                 Text(weather.currentWeather.condition.displayName)
                     .font(.system(size: 24, weight: .regular))
                     .foregroundColor(.white.opacity(0.9))
+                    .shadow(color: .black.opacity(0.3), radius: 3, x: 0, y: 2)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
 
                 HStack(spacing: 4) {
                     Text("最高 \(Int(weather.dailyForecast.first?.highTemperature ?? 0))°")
@@ -76,6 +83,8 @@ struct MainWeatherView: View {
                 }
                 .font(.system(size: 18))
                 .foregroundColor(.white.opacity(0.8))
+                .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
+                .transition(.opacity)
             }
             .padding(.top, 60)
 

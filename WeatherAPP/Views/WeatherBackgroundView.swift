@@ -96,6 +96,14 @@ struct WeatherBackgroundView: View {
     @ViewBuilder
     private var weatherEffects: some View {
         switch condition {
+        case .clear, .mostlyClear:
+            // Premium floating particles for clear weather
+            if isDaytime {
+                FloatingParticlesEffect(particleCount: 25, color: .white.opacity(0.6))
+            } else {
+                FloatingParticlesEffect(particleCount: 30, color: .white.opacity(0.4))
+            }
+
         case .rain, .heavyRain:
             RainEffect(intensity: condition == .heavyRain ? 1.0 : 0.6)
 
@@ -110,6 +118,12 @@ struct WeatherBackgroundView: View {
 
         case .cloudy, .mostlyCloudy:
             CloudEffect()
+
+        case .partlyCloudy:
+            ZStack {
+                CloudEffect()
+                FloatingParticlesEffect(particleCount: 15, color: .white.opacity(0.3))
+            }
 
         default:
             EmptyView()
