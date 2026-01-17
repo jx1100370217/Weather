@@ -36,7 +36,19 @@ class LocationService: NSObject, ObservableObject {
 
     /// Request location authorization
     func requestAuthorization() {
-        locationManager.requestWhenInUseAuthorization()
+        let status = locationManager.authorizationStatus
+
+        switch status {
+        case .notDetermined:
+            locationManager.requestWhenInUseAuthorization()
+        case .authorizedWhenInUse, .authorizedAlways:
+            // Already authorized, start getting location
+            requestLocation()
+        case .denied, .restricted:
+            error = .authorizationDenied
+        @unknown default:
+            locationManager.requestWhenInUseAuthorization()
+        }
     }
 
     /// Start updating location
@@ -105,7 +117,10 @@ extension LocationService: CLLocationManagerDelegate {
             authorizationStatus = manager.authorizationStatus
 
             if authorizationStatus == .authorizedWhenInUse || authorizationStatus == .authorizedAlways {
-                startUpdatingLocation()
+                // Request location immediately after authorization
+                requestLocation()
+            } else if authorizationStatus == .denied || authorizationStatus == .restricted {
+                error = .authorizationDenied
             }
         }
     }
