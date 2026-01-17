@@ -110,6 +110,15 @@ struct MainWeatherView: View {
             // Weather details
             WeatherDetailsCard(current: weather.currentWeather)
 
+            // Wind compass (new feature!)
+            WindCompassCard(
+                windSpeed: weather.currentWeather.windSpeed,
+                windDirection: weather.currentWeather.windDirection
+            )
+
+            // UV Index (new feature!)
+            UVIndexCard(uvIndex: weather.currentWeather.uvIndex)
+
             // Sun and moon
             if let daily = weather.dailyForecast.first {
                 SunMoonCard(daily: daily)
