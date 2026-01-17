@@ -74,34 +74,54 @@ class LocationService: NSObject, ObservableObject {
         locationManager.requestLocation()
     }
 
-    /// Geocode location to get city name
+    /// Geocode location to get city name using MapKit
     func geocodeLocation(_ location: CLLocation) async throws -> String {
-        // Use CLGeocoder for reverse geocoding
-        // Note: While deprecated in iOS 26.0, it's more reliable than MKLocalSearch for this purpose
-        // The new MKReverseGeocodingRequest API is not yet widely documented
-        return try await withCheckedThrowingContinuation { continuation in
-            #if compiler(>=6.0)
-            #warning("TODO: Migrate to MKReverseGeocodingRequest when available and documented")
-            #endif
-            let geocoder = CLGeocoder()
-            geocoder.reverseGeocodeLocation(location) { placemarks, error in
-                if let error = error {
-                    print("Geocoding error: \(error.localizedDescription)")
-                    // Fallback to coordinate-based name
-                    let lat = String(format: "%.2f", location.coordinate.latitude)
-                    let lon = String(format: "%.2f", location.coordinate.longitude)
-                    continuation.resume(returning: "位置 \(lat), \(lon)")
-                    return
+        // Use MapKit's MKLocalSearch for reverse geocoding (iOS 26.0+ compliant)
+        let searchRequest = MKLocalSearch.Request()
+
+        // Create a small region around the coordinate
+        let region = MKCoordinateRegion(
+            center: location.coordinate,
+            latitudinalMeters: 100,
+            longitudinalMeters: 100
+        )
+        searchRequest.region = region
+        searchRequest.resultTypes = .address
+
+        let search = MKLocalSearch(request: searchRequest)
+
+        do {
+            let response = try await search.start()
+
+            // Try to get location name from mapItems
+            if let mapItem = response.mapItems.first {
+                // Use the name directly from mapItem (non-deprecated)
+                if let name = mapItem.name, !name.isEmpty {
+                    // MKMapItem.name is not deprecated and provides location info
+                    return name
                 }
 
-                if let placemark = placemarks?.first {
-                    let locality = placemark.locality ?? placemark.subLocality
-                    let name = locality ?? placemark.administrativeArea ?? placemark.name ?? "未知位置"
-                    continuation.resume(returning: name)
-                } else {
-                    continuation.resume(returning: "未知位置")
+                // If name is empty, try using timeZone + coordinates
+                if let timeZone = mapItem.timeZone {
+                    // Use timezone identifier to guess location
+                    let components = timeZone.identifier.components(separatedBy: "/")
+                    if components.count > 1 {
+                        return components.last ?? "未知位置"
+                    }
                 }
             }
+
+            // If no results, return coordinate-based name
+            let lat = String(format: "%.2f", location.coordinate.latitude)
+            let lon = String(format: "%.2f", location.coordinate.longitude)
+            return "位置 \(lat), \(lon)"
+
+        } catch {
+            print("Geocoding error: \(error.localizedDescription)")
+            // Fallback to coordinate-based name
+            let lat = String(format: "%.2f", location.coordinate.latitude)
+            let lon = String(format: "%.2f", location.coordinate.longitude)
+            return "位置 \(lat), \(lon)"
         }
     }
 
