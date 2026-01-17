@@ -7,6 +7,7 @@
 
 import Foundation
 import CoreLocation
+import MapKit
 import Combine
 
 /// Service class to handle location updates
@@ -20,7 +21,6 @@ class LocationService: NSObject, ObservableObject {
     @Published var error: LocationError?
 
     private let locationManager = CLLocationManager()
-    private let geocoder = CLGeocoder()
 
     override init() {
         super.init()
@@ -64,20 +64,26 @@ class LocationService: NSObject, ObservableObject {
 
     /// Geocode location to get city name
     func geocodeLocation(_ location: CLLocation) async throws -> String {
-        return try await withCheckedThrowingContinuation { continuation in
-            geocoder.reverseGeocodeLocation(location) { placemarks, error in
-                if let error = error {
-                    continuation.resume(throwing: LocationError.geocodingFailed(error.localizedDescription))
-                    return
-                }
+        // Use MapKit's MKLocalSearch as replacement for CLGeocoder
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = "current location"
+        request.region = MKCoordinateRegion(
+            center: location.coordinate,
+            latitudinalMeters: 1000,
+            longitudinalMeters: 1000
+        )
 
-                if let placemark = placemarks?.first {
-                    let name = placemark.locality ?? placemark.name ?? "未知位置"
-                    continuation.resume(returning: name)
-                } else {
-                    continuation.resume(returning: "未知位置")
-                }
+        let search = MKLocalSearch(request: request)
+
+        do {
+            let response = try await search.start()
+            if let firstItem = response.mapItems.first {
+                // Use name directly from MKMapItem
+                return firstItem.name ?? "未知位置"
             }
+            return "未知位置"
+        } catch {
+            throw LocationError.geocodingFailed(error.localizedDescription)
         }
     }
 

@@ -170,13 +170,32 @@ class WeatherService: ObservableObject {
         case .drizzle: return .drizzle
         case .rain: return .rain
         case .heavyRain: return .heavyRain
+        case .sunShowers: return .rain
         case .snow: return .snow
         case .heavySnow: return .heavySnow
         case .sleet: return .sleet
         case .hail: return .hail
         case .windy: return .windy
         case .smoky: return .smoky
-        default: return .clear
+        case .blowingDust: return .clear
+        case .freezingDrizzle: return .drizzle
+        case .freezingRain: return .rain
+        case .flurries: return .snow
+        case .sunFlurries: return .snow
+        case .scatteredThunderstorms: return .rain
+        case .strongStorms: return .rain
+        case .thunderstorms: return .rain
+        case .isolatedThunderstorms: return .rain
+        case .tropicalStorm: return .rain
+        case .hurricane: return .rain
+        case .blizzard: return .heavySnow
+        case .blowingSnow: return .snow
+        case .wintryMix: return .sleet
+        case .hot: return .clear
+        case .frigid: return .clear
+        case .haze: return .foggy
+        case .breezy: return .windy
+        @unknown default: return .clear
         }
     }
 
@@ -186,6 +205,7 @@ class WeatherService: ObservableObject {
         case .moderate: return .moderate
         case .severe: return .severe
         case .extreme: return .extreme
+        case .unknown: return .moderate
         @unknown default: return .moderate
         }
     }
