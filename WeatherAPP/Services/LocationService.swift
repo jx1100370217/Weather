@@ -76,26 +76,32 @@ class LocationService: NSObject, ObservableObject {
 
     /// Geocode location to get city name
     func geocodeLocation(_ location: CLLocation) async throws -> String {
-        // Use MapKit's MKLocalSearch as replacement for CLGeocoder
-        let request = MKLocalSearch.Request()
-        request.naturalLanguageQuery = "current location"
-        request.region = MKCoordinateRegion(
-            center: location.coordinate,
-            latitudinalMeters: 1000,
-            longitudinalMeters: 1000
-        )
+        // Use CLGeocoder for reverse geocoding
+        // Note: While deprecated in iOS 26.0, it's more reliable than MKLocalSearch for this purpose
+        // The new MKReverseGeocodingRequest API is not yet widely documented
+        return try await withCheckedThrowingContinuation { continuation in
+            #if compiler(>=6.0)
+            #warning("TODO: Migrate to MKReverseGeocodingRequest when available and documented")
+            #endif
+            let geocoder = CLGeocoder()
+            geocoder.reverseGeocodeLocation(location) { placemarks, error in
+                if let error = error {
+                    print("Geocoding error: \(error.localizedDescription)")
+                    // Fallback to coordinate-based name
+                    let lat = String(format: "%.2f", location.coordinate.latitude)
+                    let lon = String(format: "%.2f", location.coordinate.longitude)
+                    continuation.resume(returning: "位置 \(lat), \(lon)")
+                    return
+                }
 
-        let search = MKLocalSearch(request: request)
-
-        do {
-            let response = try await search.start()
-            if let firstItem = response.mapItems.first {
-                // Use name directly from MKMapItem
-                return firstItem.name ?? "未知位置"
+                if let placemark = placemarks?.first {
+                    let locality = placemark.locality ?? placemark.subLocality
+                    let name = locality ?? placemark.administrativeArea ?? placemark.name ?? "未知位置"
+                    continuation.resume(returning: name)
+                } else {
+                    continuation.resume(returning: "未知位置")
+                }
             }
-            return "未知位置"
-        } catch {
-            throw LocationError.geocodingFailed(error.localizedDescription)
         }
     }
 
