@@ -74,39 +74,30 @@ class LocationService: NSObject, ObservableObject {
         locationManager.requestLocation()
     }
 
-    /// Geocode location to get city name using MapKit
+    /// Geocode location to get city name using CLGeocoder
     func geocodeLocation(_ location: CLLocation) async throws -> String {
         // Generate coordinate-based fallback name
         let coordinateName = generateCoordinateName(for: location)
 
-        // Try MapKit search with timeout to avoid hanging
-        let searchRequest = MKLocalSearch.Request()
-        let region = MKCoordinateRegion(
-            center: location.coordinate,
-            latitudinalMeters: 100,
-            longitudinalMeters: 100
-        )
-        searchRequest.region = region
-        searchRequest.resultTypes = .address
-
-        let search = MKLocalSearch(request: searchRequest)
+        let geocoder = CLGeocoder()
 
         do {
-            // Use a timeout to avoid long waits in simulator
-            let response = try await withTimeout(seconds: 3) {
-                try await search.start()
+            // Use a timeout to avoid long waits
+            let placemarks = try await withTimeout(seconds: 3) {
+                try await geocoder.reverseGeocodeLocation(location)
             }
 
-            // Try to get location name from mapItems
-            if let mapItem = response.mapItems.first {
-                if let name = mapItem.name, !name.isEmpty {
-                    return name
-                }
-                if let timeZone = mapItem.timeZone {
-                    let components = timeZone.identifier.components(separatedBy: "/")
-                    if components.count > 1, let city = components.last {
-                        return city
-                    }
+            // Extract city name from placemark
+            if let placemark = placemarks.first {
+                // Priority: locality (city) > administrativeArea (province/state) > country
+                if let city = placemark.locality, !city.isEmpty {
+                    return city
+                } else if let area = placemark.administrativeArea, !area.isEmpty {
+                    return area
+                } else if let subArea = placemark.subAdministrativeArea, !subArea.isEmpty {
+                    return subArea
+                } else if let country = placemark.country, !country.isEmpty {
+                    return country
                 }
             }
 
